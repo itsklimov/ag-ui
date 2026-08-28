@@ -77,6 +77,15 @@ MUST do one of:
 A consumer MUST NOT let a stripped property survive into the value application
 code receives, and MUST NOT let a dropped event reach it at all.
 
+This applies only where the schema closes an object, which is everywhere it
+describes one of the protocol's own. Where the schema deliberately leaves an
+object open, a member it does not describe is not unrecognised material at all
+and MUST be preserved. The JSON Patch operations are the case: RFC 6902 section
+4 requires an operation to ignore members it does not define rather than reject
+them, so a `remove` carrying a leftover `value` is a valid patch and arrives
+whole. A consumer that strips there deletes conformant data, and the warning it
+emits is about nothing.
+
 This binds the pipeline, not the parser. A library layer that only parses an
 event — the generated models in each SDK, say — keeps unknown properties on
 purpose, so that the middleware above it can still see them. An SDK that offers
