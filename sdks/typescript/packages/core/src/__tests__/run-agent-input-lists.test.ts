@@ -11,10 +11,11 @@ import type { RunAgentInput } from "../index";
 // both sides together and the gate still passes; and the one fixture that
 // exercises the case asserts only that parsing succeeded, which is true either
 // way. Both halves of the decision are asserted here instead.
-// Mirrors spec/draft/fixtures/RunAgentInput/valid/without-tools-or-context.json,
-// inlined because this package's tsconfig carries no node types. That fixture
-// is checked by the spec harness, which asserts only that parsing SUCCEEDS —
-// true under both readings, which is why it never pinned this.
+// Byte-identical to spec/draft/fixtures/RunAgentInput/valid/minimal.json,
+// inlined because this package's tsconfig carries no node types. Ten of the
+// eleven valid RunAgentInput fixtures omit both keys, and the harness asserts
+// only that parsing SUCCEEDS — true under both readings, which is why none of
+// them ever pinned this.
 const WITHOUT_EITHER_KEY = { threadId: "t1", runId: "r1", messages: [] };
 
 describe("RunAgentInput lists the SDK materialises", () => {
@@ -55,20 +56,36 @@ describe("RunAgentInput lists the SDK materialises", () => {
   });
 
   // Compile-time canary, in the idiom compat-types.test.ts already uses: the
-  // emitted type must keep both fields REQUIRED, so a regression to `tools?:`
-  // fails the build rather than quietly reintroducing the narrowing.
-  it("keeps both fields required on the emitted type", () => {
-    // @ts-expect-error tools and context are required on the emitted type
-    const missing: RunAgentInput = { threadId: "t1", runId: "r1", messages: [] };
-    const full: RunAgentInput = {
+  // emitted type must keep both fields REQUIRED, so a regression fails the
+  // build rather than quietly reintroducing the narrowing.
+  //
+  // ONE LITERAL PER FIELD, deliberately. A single literal missing both keys is
+  // invalid for either one, so its `@ts-expect-error` stays satisfied while
+  // half the decision has already regressed — and ABSENT_MEANS_EMPTY is a
+  // per-field set someone can edit one entry of, which makes the half-regression
+  // the likelier one. Measured: with only `tools` reverted to optional, the
+  // combined form produced zero typecheck errors.
+  it("keeps tools required on the emitted type", () => {
+    // @ts-expect-error tools is required on the emitted type
+    const noTools: RunAgentInput = {
+      threadId: "t1",
+      runId: "r1",
+      messages: [],
+      context: [],
+    };
+
+    expect(noTools).toBeDefined();
+  });
+
+  it("keeps context required on the emitted type", () => {
+    // @ts-expect-error context is required on the emitted type
+    const noContext: RunAgentInput = {
       threadId: "t1",
       runId: "r1",
       messages: [],
       tools: [],
-      context: [],
     };
 
-    expect(missing).toBeDefined();
-    expect(full.tools).toEqual([]);
+    expect(noContext).toBeDefined();
   });
 });

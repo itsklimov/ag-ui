@@ -2,12 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AGUI.Abstractions;
 using Xunit;
-using Proto = AGUI.ProtocolBuffers;
 
 namespace AGUI.Protobuf.UnitTests;
 
@@ -23,9 +21,11 @@ public sealed class SchemaCorpusTest
     private static readonly JsonSerializerOptions s_options = AGUIJsonSerializerContext.Default.Options;
 
     // Walked up from the test binary rather than taken from [CallerFilePath].
-    // A deterministic build — which CI turns on — rewrites source paths to "/_/",
-    // so a caller path resolves to a directory that exists on no machine, and
-    // every fixture here failed to load in CI while passing locally.
+    // CI sets ContinuousIntegrationBuild, which turns on deterministic SOURCE
+    // PATHS and rewrites a caller path to "/_/..." — a directory that exists on
+    // no machine, so every fixture here failed to load in CI while passing
+    // locally. (Builds are deterministic everywhere; only the path rewriting is
+    // CI-only, which is why this reproduced nowhere else.)
     private static string RepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
@@ -45,8 +45,8 @@ public sealed class SchemaCorpusTest
     private static readonly string s_typeScriptBytesDir = Path.Combine(
         RepoRoot(), "sdks", "typescript", "packages", "proto", "__tests__", "__fixtures__", "bytes");
 
-    // Same reason as RepoRoot: a caller path is "/_/..." under a deterministic
-    // build, so this is anchored on the repository instead.
+    // Same reason as RepoRoot: CI's deterministic SOURCE PATHS rewrite a caller
+    // path to "/_/...", so this is anchored on the repository instead.
     private static string DotnetBytesDir()
         => Path.Combine(
             RepoRoot(), "sdks", "dotnet", "tests", "AGUI.Protobuf.UnitTests", "Fixtures", "bytes-dotnet");
@@ -185,6 +185,14 @@ public sealed class SchemaCorpusTest
     {
         if (!Directory.Exists(DotnetBytesDir()))
         {
+            // Absent is legitimate only while bootstrapping the fixtures, since
+            // xUnit does not order this against the theory that writes them.
+            // Otherwise a missing directory used to read as "nothing is stale"
+            // and pass green — which is the state CI was actually in before the
+            // repository root stopped being taken from [CallerFilePath].
+            Assert.True(
+                Environment.GetEnvironmentVariable("AGUI_WRITE_PROTO_BYTE_FIXTURES") == "1",
+                $"{DotnetBytesDir()} is missing. Run with AGUI_WRITE_PROTO_BYTE_FIXTURES=1 to write it.");
             return;
         }
 

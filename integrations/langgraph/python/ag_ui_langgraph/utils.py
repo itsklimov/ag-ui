@@ -43,14 +43,30 @@ try:
     # false and route legacy items down the wrong branch.
     from ag_ui.core import BinaryInputContent  # type: ignore[attr-defined]
 except ImportError:  # pragma: no cover - depends on the installed SDK
-    # 1.0 and later: the protocol no longer knows the shape, so it is declared
-    # here field for field as the protocol carried it, the ``validate_source``
-    # rule included, because those same branches are written against exactly
-    # that behaviour.
+    # 1.0 and later, where the protocol no longer knows the shape.
+    #
+    # This keeps the module IMPORTABLE; it does not keep the legacy path alive.
+    # 1.0's ``InputContent`` is a discriminated union with no ``binary`` member,
+    # so a message carrying one is rejected at ``RunAgentInput`` validation —
+    # loudly, and upstream of this adapter. Nothing here can construct one
+    # either, since this module only reads already-parsed models. So under 1.0
+    # the two ``isinstance`` branches below are inert, and a legacy producer
+    # gets a validation error rather than a conversion. Reviving that path would
+    # mean normalising ``binary`` into a media part BEFORE validation, the way
+    # the TypeScript client's 0.0.47 middleware does — not here.
+    #
+    # ``extra="allow"`` matches the base the protocol used: the wire may carry
+    # members this shape does not name, and retaining them means a round trip
+    # through this twin does not quietly discard them. The branches below read
+    # only declared fields, so nothing here depends on it today.
     class BinaryInputContent(BaseModel):
         """The legacy binary content part, retired from ``ag_ui.core`` in 1.0."""
 
-        model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+        model_config = ConfigDict(
+            extra="allow",
+            populate_by_name=True,
+            alias_generator=to_camel,
+        )
 
         type: Literal["binary"] = "binary"
         mime_type: str
