@@ -315,13 +315,24 @@ export const transformChunks =
                   messageId: messageChunkEvent.messageId,
                   // Absent means assistant, which the spec states normatively
                   // and the generated validator deliberately does not apply, so
-                  // materialising it here is real work nothing else does. `??`
-                  // rather than `||` on purpose: a role that is present but
-                  // wrong is not this stage's to correct, and enforcement has
-                  // already rejected it by the time expansion runs.
-                  role: messageChunkEvent.role ?? "assistant",
+                  // materialising it here is real work nothing else does.
+                  //
+                  // ABSENT, though — not merely falsy, and not null. This stage
+                  // must not depend on enforcement having run first: it has, on
+                  // the three pipelines in agent.ts, but Middleware.runNext
+                  // expands INSIDE the middleware chain, upstream of it. So a
+                  // present-but-wrong role reaching here has not been judged
+                  // yet, and substituting for it would repair a producer defect
+                  // that is fatal when the same value is sent unchunked.
+                  role:
+                    messageChunkEvent.role === undefined
+                      ? "assistant"
+                      : messageChunkEvent.role,
                   ...(messageChunkEvent.name !== undefined && { name: messageChunkEvent.name }),
-                  ...(messageChunkEvent.subagentRunId != null && {
+                  // `!== undefined`, not `!= null`: an absent owner is absent,
+                  // but a null one is a violation the spec names, and dropping
+                  // it here would hide it from the stage that rejects it.
+                  ...(messageChunkEvent.subagentRunId !== undefined && {
                     subagentRunId: messageChunkEvent.subagentRunId,
                   }),
                 } as TextMessageStartEvent,
@@ -424,7 +435,10 @@ export const transformChunks =
                   toolCallId: toolCallChunkEvent.toolCallId,
                   toolCallName: toolCallChunkEvent.toolCallName,
                   parentMessageId: toolCallChunkEvent.parentMessageId,
-                  ...(toolCallChunkEvent.subagentRunId != null && {
+                  // `!== undefined`, not `!= null`: an absent owner is absent,
+                  // but a null one is a violation the spec names, and dropping
+                  // it here would hide it from the stage that rejects it.
+                  ...(toolCallChunkEvent.subagentRunId !== undefined && {
                     subagentRunId: toolCallChunkEvent.subagentRunId,
                   }),
                 } as ToolCallStartEvent,
@@ -520,7 +534,10 @@ export const transformChunks =
                   type: EventType.REASONING_MESSAGE_START,
                   messageId: reasoningChunkEvent.messageId,
                   role: "reasoning",
-                  ...(reasoningChunkEvent.subagentRunId != null && {
+                  // `!== undefined`, not `!= null`: an absent owner is absent,
+                  // but a null one is a violation the spec names, and dropping
+                  // it here would hide it from the stage that rejects it.
+                  ...(reasoningChunkEvent.subagentRunId !== undefined && {
                     subagentRunId: reasoningChunkEvent.subagentRunId,
                   }),
                 } as ReasoningMessageStartEvent,
