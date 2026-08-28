@@ -197,7 +197,7 @@ class TestEventTranslatorComprehensive:
         assert events[0].type == EventType.STATE_DELTA
 
         # Check patches
-        patches = [op.model_dump() for op in events[0].delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in events[0].delta]
         assert len(patches) == 2
         assert any(patch["path"] == "/key1" and patch["value"] == "value1" for patch in patches)
         assert any(patch["path"] == "/key2" and patch["value"] == "value2" for patch in patches)
@@ -874,7 +874,7 @@ class TestEventTranslatorComprehensive:
         # Check patches
         # Patch entries are typed operation models since the SDK moved onto
         # the generated models; the wire form is unchanged.
-        patches = [op.model_dump() for op in event.delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in event.delta]
         assert any(patch["op"] == "add" and patch["path"] == "/key1" and patch["value"] == "value1" for patch in patches)
         assert any(patch["op"] == "add" and patch["path"] == "/key2" and patch["value"] == "value2" for patch in patches)
 
@@ -900,7 +900,7 @@ class TestEventTranslatorComprehensive:
         # Check patches for nested objects
         # Patch entries are typed operation models since the SDK moved onto
         # the generated models; the wire form is unchanged.
-        patches = [op.model_dump() for op in event.delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in event.delta]
         assert any(patch["op"] == "add" and patch["path"] == "/user" and patch["value"] == {"name": "John", "age": 30} for patch in patches)
         assert any(patch["op"] == "add" and patch["path"] == "/settings" and patch["value"] == {"theme": "dark", "notifications": True} for patch in patches)
 
@@ -919,7 +919,7 @@ class TestEventTranslatorComprehensive:
         # Check patches for arrays
         # Patch entries are typed operation models since the SDK moved onto
         # the generated models; the wire form is unchanged.
-        patches = [op.model_dump() for op in event.delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in event.delta]
         assert any(patch["op"] == "add" and patch["path"] == "/items" and patch["value"] == ["item1", "item2", "item3"] for patch in patches)
         assert any(patch["op"] == "add" and patch["path"] == "/numbers" and patch["value"] == [1, 2, 3, 4, 5] for patch in patches)
 
@@ -942,7 +942,7 @@ class TestEventTranslatorComprehensive:
         # Check all patches use "add" operation
         # Patch entries are typed operation models since the SDK moved onto
         # the generated models; the wire form is unchanged.
-        patches = [op.model_dump() for op in event.delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in event.delta]
         for patch in patches:
             assert patch["op"] == "add"
             assert patch["path"].startswith("/")
@@ -975,7 +975,7 @@ class TestEventTranslatorComprehensive:
         # Check that all keys are properly escaped in paths
         # Patch entries are typed operation models since the SDK moved onto
         # the generated models; the wire form is unchanged.
-        patches = [op.model_dump() for op in event.delta]
+        patches = [op if isinstance(op, dict) else op.model_dump() for op in event.delta]
         paths = [patch["path"] for patch in patches]
         assert "/key-with-dashes" in paths
         assert "/key_with_underscores" in paths

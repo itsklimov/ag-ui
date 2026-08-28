@@ -22,8 +22,22 @@ public sealed class SchemaCorpusTest
 {
     private static readonly JsonSerializerOptions s_options = AGUIJsonSerializerContext.Default.Options;
 
-    private static string RepoRoot([CallerFilePath] string path = "")
-        => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, "..", "..", "..", ".."));
+    // Walked up from the test binary rather than taken from [CallerFilePath].
+    // A deterministic build — which CI turns on — rewrites source paths to "/_/",
+    // so a caller path resolves to a directory that exists on no machine, and
+    // every fixture here failed to load in CI while passing locally.
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "spec", "draft", "fixtures")))
+        {
+            dir = dir.Parent;
+        }
+
+        return dir?.FullName
+            ?? throw new DirectoryNotFoundException(
+                $"No repository root above '{AppContext.BaseDirectory}' carries spec/draft/fixtures.");
+    }
 
     private static readonly string s_fixturesDir =
         Path.Combine(RepoRoot(), "spec", "draft", "fixtures");
@@ -31,8 +45,11 @@ public sealed class SchemaCorpusTest
     private static readonly string s_typeScriptBytesDir = Path.Combine(
         RepoRoot(), "sdks", "typescript", "packages", "proto", "__tests__", "__fixtures__", "bytes");
 
-    private static string DotnetBytesDir([CallerFilePath] string path = "")
-        => Path.Combine(Path.GetDirectoryName(path)!, "Fixtures", "bytes-dotnet");
+    // Same reason as RepoRoot: a caller path is "/_/..." under a deterministic
+    // build, so this is anchored on the repository instead.
+    private static string DotnetBytesDir()
+        => Path.Combine(
+            RepoRoot(), "sdks", "dotnet", "tests", "AGUI.Protobuf.UnitTests", "Fixtures", "bytes-dotnet");
 
     public static TheoryData<string, string> ValidEventFixtures()
     {
