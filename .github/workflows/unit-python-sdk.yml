@@ -9,6 +9,14 @@ on:
       - "integrations/watsonx/python/**"
       - "integrations/adk-middleware/python/**"
       - "integrations/aws-strands/python/**"
+      # Outside the python tree, but the aws-strands python suite derives its
+      # half of the error-code contract from source and asserts it against this
+      # shared fixture, so editing the fixture alone can turn that suite red.
+      - "integrations/aws-strands/error-codes.json"
+      # Same reason one directory over: the aws-strands corpus suite reads the
+      # synthetic emission shapes and expected.json checked in here, so editing
+      # the corpus alone can turn that suite red too.
+      - "integrations/aws-strands/error-code-corpus/**"
       - "integrations/langroid/python/**"
       - "integrations/crew-ai/python/**"
       - "integrations/claude-managed-agents/python/**"
@@ -36,6 +44,14 @@ on:
       - "integrations/watsonx/python/**"
       - "integrations/adk-middleware/python/**"
       - "integrations/aws-strands/python/**"
+      # Outside the python tree, but the aws-strands python suite derives its
+      # half of the error-code contract from source and asserts it against this
+      # shared fixture, so editing the fixture alone can turn that suite red.
+      - "integrations/aws-strands/error-codes.json"
+      # Same reason one directory over: the aws-strands corpus suite reads the
+      # synthetic emission shapes and expected.json checked in here, so editing
+      # the corpus alone can turn that suite red too.
+      - "integrations/aws-strands/error-code-corpus/**"
       - "integrations/langroid/python/**"
       - "integrations/crew-ai/python/**"
       - "integrations/claude-managed-agents/python/**"

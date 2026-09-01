@@ -1,0 +1,339 @@
+{
+  "about": [
+    "One tiny synthetic source per shape a terminal error frame can be written in, and what the two extractors must read out of it.",
+    "The Python source for a case lives in python/<case>.py and the TypeScript one in typescript/<case>.ts, so a shape handled on one side and not the other fails that side's table-driven suite.",
+    "Every source is a shape its language can actually execute. A shape one language cannot spell is written for the other side alone rather than faked into a parity case.",
+    "'codes' maps the RUN_ERROR codes an extractor reads out of the case to their normalised message templates, with {} standing in for an interpolated value and <no message> for a frame that carries no message at all. A code the case emits at run time but writes in a shape no extractor can resolve, a parameter or an opaque key, is absent here and counted in 'unresolved' instead.",
+    "'unresolved' is how many recognised construction sites the case has whose code cannot be read as string literals.",
+    "A case listed for one side alone needs a note saying which spelling the other language does not have. Any case may carry one where its reading needs explaining."
+  ],
+  "cases": [
+    {
+      "case": "plain_literal",
+      "sides": ["python", "typescript"],
+      "codes": { "PLAIN_LITERAL": ["A plain literal message."] },
+      "unresolved": 0
+    },
+    {
+      "case": "spread_frame",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "SPREAD_BASE": ["Base message."],
+        "SPREAD_FRAME": ["A spread-built message."]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "spread_not_a_frame",
+      "sides": ["python", "typescript"],
+      "codes": {},
+      "unresolved": 0
+    },
+    {
+      "case": "missing_code",
+      "sides": ["python", "typescript"],
+      "codes": {},
+      "unresolved": 1
+    },
+    {
+      "case": "code_through_local",
+      "sides": ["python", "typescript"],
+      "codes": { "THROUGH_LOCAL": ["Resolved through a local."] },
+      "unresolved": 0
+    },
+    {
+      "case": "code_through_module_constant",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "THROUGH_MODULE_CONSTANT": ["Resolved through a module constant."]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "code_through_reassignment",
+      "sides": ["python", "typescript"],
+      "codes": { "THROUGH_REASSIGNMENT": ["Resolved through a reassignment."] },
+      "unresolved": 0
+    },
+    {
+      "case": "code_through_classifier",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "CLASSIFIER_ADAPTER_BUG": ["Resolved through a classifier."],
+        "CLASSIFIER_STRANDS_ERROR": ["Resolved through a classifier."]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "code_is_a_parameter",
+      "sides": ["python", "typescript"],
+      "codes": {},
+      "unresolved": 1
+    },
+    {
+      "case": "sibling_same_named_locals",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "FIRST_SIBLING": ["The first sibling."],
+        "SECOND_SIBLING": ["The second sibling."]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "message_concatenation",
+      "sides": ["python", "typescript"],
+      "codes": { "MESSAGE_CONCATENATION": ["Concatenated {} tail."] },
+      "unresolved": 0
+    },
+    {
+      "case": "message_exact_whitespace",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "MESSAGE_EXACT_WHITESPACE": [
+          "Two  spaces, a\nline break, and a trailing space. "
+        ]
+      },
+      "unresolved": 0,
+      "note": "The template is the literal text, not a tidied version of it. A doubled space, a line break and a trailing space all survive extraction, because each is text a client matching the message literally has to match."
+    },
+    {
+      "case": "message_conditional",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "MESSAGE_CONDITIONAL": [
+          "The conditional false branch.",
+          "The conditional true branch."
+        ]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "message_boolean_or",
+      "sides": ["python", "typescript"],
+      "codes": { "MESSAGE_BOOLEAN_OR": ["The boolean fallback.", "{}"] },
+      "unresolved": 0
+    },
+    {
+      "case": "message_helper_argument",
+      "sides": ["python", "typescript"],
+      "codes": {
+        "HELPER_ARGUMENT": [
+          "Interrupt {} is unknown.",
+          "The helper argument sentence."
+        ]
+      },
+      "unresolved": 0
+    },
+    {
+      "case": "helper_marker",
+      "sides": ["python", "typescript"],
+      "codes": { "HELPER_MARKER": ["Built through the helper."] },
+      "unresolved": 1,
+      "note": "The helper's own frame carries whatever code it was handed, so writing the helper down is itself one unresolved site on each side."
+    },
+    {
+      "case": "helper_alias",
+      "sides": ["python", "typescript"],
+      "codes": { "HELPER_ALIAS": ["Reached through a helper alias."] },
+      "unresolved": 1,
+      "note": "Unresolved for the same reason as helper_marker: the helper this case aliases is written down here too."
+    },
+    {
+      "case": "frame_in_constructor",
+      "sides": ["python", "typescript"],
+      "codes": { "IN_CONSTRUCTOR": ["Built in a constructor."] },
+      "unresolved": 0
+    },
+    {
+      "case": "frame_in_accessor",
+      "sides": ["python", "typescript"],
+      "codes": { "IN_ACCESSOR": ["Built in an accessor."] },
+      "unresolved": 0
+    },
+    {
+      "case": "aliased_constructor",
+      "sides": ["python"],
+      "codes": { "ALIASED_CONSTRUCTOR": ["An aliased constructor message."] },
+      "unresolved": 0,
+      "note": "Python only. TypeScript recognises a frame by the RUN_ERROR type on an object literal rather than by a constructor, so it has no constructor to alias; type_through_identifier is its own bound-name spelling, and helper_alias is the alias both sides share."
+    },
+    {
+      "case": "constructor_class_method",
+      "sides": ["python"],
+      "codes": {
+        "CONSTRUCTOR_CLASS_METHOD": ["Built through a class method: {}"]
+      },
+      "unresolved": 0,
+      "note": "Python only. A pydantic model can be built through model_construct or model_validate as well as by calling it, and both are already idioms in this package, so a frame written that way has to be recognised as one. TypeScript recognises a frame by the RUN_ERROR type on an object literal, which has no class-method spelling to miss."
+    },
+    {
+      "case": "constructor_from_a_mapping",
+      "sides": ["python"],
+      "codes": {
+        "CONSTRUCTOR_FROM_A_MAPPING": ["Validated from a mapping: {}"]
+      },
+      "unresolved": 0,
+      "note": "Python only, for the same reason as constructor_class_method. model_validate takes the whole frame as one mapping, so the code and the message are read out of the dict literal written at the site; a mapping the site does not write is code_kwargs_unreadable, and stays unresolved."
+    },
+    {
+      "case": "code_kwargs_unreadable",
+      "sides": ["python"],
+      "codes": {},
+      "unresolved": 1,
+      "note": "Python only. A frame built by unpacking a mapping has no TypeScript counterpart: the spread cases cover the shape TypeScript spells instead."
+    },
+    {
+      "case": "failure_tuple",
+      "sides": ["python"],
+      "codes": {
+        "FAILURE_TUPLE": ["Bound as a failure tuple."],
+        "FAILURE_TUPLE_ENCODING": ["Encoding failed."]
+      },
+      "unresolved": 1,
+      "note": "Python only. Reading a code and its message out of a two-element tuple unpacked at the construction site is a rule the Python extractor carries for its endpoint alone. It keys on a recognised site really unpacking that tuple into its code and message positions, never on the name the tuple was given, and only inside the scope that unpacks it, so an unrelated pair called failure records nothing. The frame the unpacked names are written into is the unresolved site, exactly as it is in that endpoint."
+    },
+    {
+      "case": "missing_message",
+      "sides": ["typescript"],
+      "codes": { "NO_MESSAGE": ["<no message>"] },
+      "unresolved": 0,
+      "note": "TypeScript only. Python's RunErrorEvent requires a message, and so does the helper, so a frame carrying none cannot be constructed there at all."
+    },
+    {
+      "case": "type_as_const",
+      "sides": ["typescript"],
+      "codes": { "TYPE_AS_CONST": ["Typed with an as-expression."] },
+      "unresolved": 0,
+      "note": "TypeScript only. TypeScript recognises a frame by a RUN_ERROR type property on an object literal, so how that property is written is a shape only its extractor can be blind to. Python's frames carry a type field too, written type=EventType.RUN_ERROR in every case here, but its extractor keys on the constructor called and never reads that field, so no spelling of it is a shape worth pinning on that side. The as-expression is TypeScript syntax besides."
+    },
+    {
+      "case": "type_parenthesised",
+      "sides": ["typescript"],
+      "codes": { "TYPE_PARENTHESISED": ["Typed inside parentheses."] },
+      "unresolved": 0,
+      "note": "TypeScript only, for the same reason as type_as_const. Parentheses are spellable in Python, and a frame written type=(EventType.RUN_ERROR) extracts there exactly as an unparenthesised one does, because the type field is not what that extractor reads; it is the TypeScript recogniser that has to see through them."
+    },
+    {
+      "case": "type_through_identifier",
+      "sides": ["typescript"],
+      "codes": {
+        "TYPE_THROUGH_IDENTIFIER": ["Typed through a bound identifier."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only, for the same reason as type_as_const. Python's nearest spelling aliases the constructor, which aliased_constructor covers."
+    },
+    {
+      "case": "type_unresolved_identifier",
+      "sides": ["typescript"],
+      "codes": {
+        "TYPE_UNRESOLVED_IDENTIFIER": [
+          "Typed through an unresolved identifier."
+        ]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only, for the same reason as type_as_const."
+    },
+    {
+      "case": "code_keys",
+      "sides": ["typescript"],
+      "codes": {
+        "CODE_KEY_COMPUTED": ["Keyed with a literal computed name."],
+        "CODE_KEY_QUOTED": ["Keyed with a quoted name."]
+      },
+      "unresolved": 1,
+      "note": "TypeScript only. Python keyword arguments have no quoted or computed spelling; code_kwargs_unreadable covers its own opaque one."
+    },
+    {
+      "case": "message_nullish_coalescing",
+      "sides": ["typescript"],
+      "codes": {
+        "MESSAGE_NULLISH_COALESCING": ["The nullish fallback.", "{}"]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only. Python spells both fallback operators as or, which message_boolean_or already covers on both sides."
+    },
+    {
+      "case": "frame_in_static_block",
+      "sides": ["typescript"],
+      "codes": { "IN_STATIC_BLOCK": ["Built in a static block."] },
+      "unresolved": 0,
+      "note": "TypeScript only. Python has no class static initialisation block."
+    },
+    {
+      "case": "arrow_function_builder",
+      "sides": ["typescript"],
+      "codes": {
+        "ARROW_BUILDER": [
+          "Interrupt {} is unknown.",
+          "The arrow builder sentence."
+        ]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only. Python can spell the counterpart, a lambda bound to a name, but its builder rule follows a def alone: the frame inside such a lambda is read where it is written, its message renders to the bare placeholder, and no site is counted unresolved, so a Python case here would pin no caller sentence at all. The TypeScript rule follows a function bound to a name as well as a declaration, so the sentences the callers hand this builder are pinned here exactly as message_helper_argument pins them for the declaration spelling."
+    },
+    {
+      "case": "code_set_in_a_try_body",
+      "sides": ["typescript"],
+      "codes": {
+        "BEFORE_THE_TRY": ["Reported from the handler."],
+        "SET_IN_THE_TRY": ["Reported from the handler."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only. The throw lands somewhere inside the body rather than before it, so the handler runs carrying whatever the body had bound by then and both codes reach the wire. Python spells try/except and reads a handler the same way; the mirror source is left to that side, whose soundness suite already pins this shape."
+    },
+    {
+      "case": "code_rebound_in_a_loop",
+      "sides": ["typescript"],
+      "codes": {
+        "FIRST_PASS": ["Reported for {}."],
+        "LATER_PASSES": ["Reported for {}."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only, one-sided for the same reason as code_set_in_a_try_body. The frame is written above the reassignment, so the second iteration and every one after it emits under a code no single walk of the body ever sees live there."
+    },
+    {
+      "case": "code_falling_through_a_switch",
+      "sides": ["typescript"],
+      "codes": {
+        "BEFORE_THE_SWITCH": ["Reported from the second clause."],
+        "SET_IN_THE_FIRST_CLAUSE": ["Reported from the second clause."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only. Python has no fallthrough: its match cases are alternatives that cannot run into one another, so entering at one clause and emitting from the next is a shape it cannot spell."
+    },
+    {
+      "case": "classifier_literal_never_returned",
+      "sides": ["typescript"],
+      "codes": {
+        "GUARDED_ADAPTER_BUG": ["Resolved through a guarded classifier."],
+        "GUARDED_STRANDS_ERROR": ["Resolved through a guarded classifier."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only, one-sided for the same reason as code_set_in_a_try_body. LEGACY_TIMEOUT is a code-shaped literal the classifier compares against and never returns, so it belongs to no code the adapter can emit; only what the returns evaluate to is a reading of the call."
+    },
+    {
+      "case": "code_from_a_mapping_branch",
+      "sides": ["typescript"],
+      "codes": {},
+      "unresolved": 1,
+      "note": "TypeScript only, one-sided for the same reason as code_set_in_a_try_body. THE_KEY is how the table is keyed and FROM_A_MAPPING is a value the site never reads, so neither is a code; the code the frame does carry on that branch cannot be read at all, which leaves the whole site counted rather than half read."
+    },
+    {
+      "case": "builder_named_like_a_method",
+      "sides": ["typescript"],
+      "codes": { "BUILDER_BY_NAME": ["The builder sentence."] },
+      "unresolved": 0,
+      "note": "TypeScript only, one-sided for the same reason as code_set_in_a_try_body. A builder is followed only where it is called by its own bare name, so the sentence handed to an unrelated method sharing that name is not a message this adapter puts on the wire."
+    },
+    {
+      "case": "code_through_conditional",
+      "sides": ["typescript"],
+      "codes": {
+        "CONDITIONAL_ADAPTER_BUG": ["Resolved through a conditional."],
+        "CONDITIONAL_STRANDS_ERROR": ["Resolved through a conditional."]
+      },
+      "unresolved": 0,
+      "note": "TypeScript only. This adapter's own classifier splits its two codes across the arms of one conditional expression, where the Python sibling spells that split as two returns; code_through_classifier covers the two-return shape on both sides."
+    }
+  ]
+}

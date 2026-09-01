@@ -1,0 +1,6 @@
+# Two synthetic sources for the AWS Strands error-code extractors. Each is
+# written in one deliberate shape, a quoted key and a parenthesised value, that
+# formatting would rewrite into a different shape and so into a different test
+# case. The rest of that corpus is formatted like any other source.
+integrations/aws-strands/error-code-corpus/typescript/code_keys.ts
+integrations/aws-strands/error-code-corpus/typescript/type_parenthesised.ts
