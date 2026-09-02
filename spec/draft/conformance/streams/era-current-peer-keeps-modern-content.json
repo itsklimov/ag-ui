@@ -66,8 +66,15 @@
   ],
   "expect": {
     "outcome": "completed",
-    "eventTypes": ["RUN_STARTED", "SUBAGENT_STARTED", "SUBAGENT_FINISHED", "RUN_FINISHED"],
-    "warnings": ["Removed unrecognised material at '/messages/1/content/0'"],
+    "eventTypes": [
+      "RUN_STARTED",
+      "SUBAGENT_STARTED",
+      "SUBAGENT_FINISHED",
+      "RUN_FINISHED"
+    ],
+    "warnings": [
+      "Removed unrecognised material at '/messages/1/content/0'"
+    ],
     "request": {
       "messages": [
         {
@@ -104,12 +111,38 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The .NET client has no era shims to gate, so nothing here can be transformed by one and the request it builds comes straight from the fixture input. It also handles the retired part differently and earlier: AGUIMessageJsonConverter's closed input-content union rejects {\"type\":\"binary\"} while the run input is being deserialized, so the WHOLE second message is left out before the run starts (see era-0-0-47) rather than being emptied by outgoing enforcement, and that rejection is recorded as unrepresentable input rather than raised as a warning. `warnings` is emptied only to displace the base expectation, since an override replaces a key rather than removing it; `noWarnings` is what asserts this lane's silence. The request assertion is reduced to the run identity for the same reason era-0-0-47's is. What still holds here, and is what this fixture is for on this lane, is that the SUBAGENT_* lifecycle reaches the consumer as ordinary 1.0 events, in order, alongside the run terminals.",
+      "intentional": "the .NET client has no era shims to gate; its input-content union is closed, so the retired binary part makes the whole message unrepresentable and it is left out while the modern message and the attributed assistant message survive intact \u2014 pinned here message by message, because asserting only the ids would pass just as happily if every message were dropped or mangled",
       "warnings": [],
       "noWarnings": true,
       "request": {
         "threadId": "t-eracur",
-        "runId": "r-1"
+        "runId": "r-1",
+        "messages": [
+          {
+            "id": "eracur-u1",
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is in this picture?"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "url",
+                  "value": "https://example.com/cat.png",
+                  "mimeType": "image/png"
+                }
+              }
+            ]
+          },
+          {
+            "id": "eracur-a1",
+            "role": "assistant",
+            "content": "Delegated.",
+            "subagentRunId": "eracur-s0"
+          }
+        ]
       }
     }
   }

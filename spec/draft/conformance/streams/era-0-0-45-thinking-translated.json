@@ -1,28 +1,69 @@
 {
   "name": "era-0-0-45-thinking-translated",
   "area": "compatibility",
-  "description": "a retired THINKING_* stream is translated into reasoning rather than dropped as unrecognised — by the always-on compatibility boundary, with the version-gated 0.0.45 shim behind it as a proven fallback",
+  "description": "retired THINKING_* shapes are translated into reasoning rather than dropped as unrecognised \u2014 by the always-on compatibility boundary, which is what actually handles them",
   "specPage": "/spec/draft/basic/versioning",
-  "kill": "remove the THINKING_* translation from BOTH CompatibilityBoundary and BackwardCompatibility_0_0_45; the events then reach enforcement as unrecognised types and are dropped, losing the reasoning entirely. Removing either one ALONE leaves this green, and that is not a gap in the fixture but the shape of the code: the always-on boundary runs innermost and converts every THINKING_* event before the version-gated shim can see one, so on an unmutated build 0.0.45's translation never runs. What this fixture proves about 0.0.45 is therefore that it still works as a fallback (deleting the boundary's branches keeps the fixture green through it), not that the shipped pipeline exercises it",
-  "client": { "maxProtocolVersion": "0.0.45" },
+  "kill": "disable BOTH translators of the retired THINKING_* shapes \u2014 the always-on compatibility boundary AND BackwardCompatibility_0_0_45. Either alone leaves this green: the boundary runs innermost and converts first, so the shim never sees these events in the shipped pipeline. This fixture pins the translation, not the shim; the shim is unreachable and nothing here regression-pins it, which is a finding about the client recorded in the corpus README",
+  "client": {
+    "maxProtocolVersion": "0.0.45"
+  },
   "stream": [
-    { "type": "RUN_STARTED", "threadId": "t-era45", "runId": "r-1" },
-    { "type": "THINKING_START", "title": "Working" },
-    { "type": "THINKING_TEXT_MESSAGE_START" },
-    { "type": "THINKING_TEXT_MESSAGE_CONTENT", "delta": "Let me check." },
-    { "type": "THINKING_TEXT_MESSAGE_END" },
-    { "type": "THINKING_END" },
-    { "type": "TEXT_MESSAGE_START", "messageId": "era45-m1", "role": "assistant" },
-    { "type": "TEXT_MESSAGE_CONTENT", "messageId": "era45-m1", "delta": "Checked." },
-    { "type": "TEXT_MESSAGE_END", "messageId": "era45-m1" },
-    { "type": "RUN_FINISHED", "threadId": "t-era45", "runId": "r-1" }
+    {
+      "type": "RUN_STARTED",
+      "threadId": "t-era45",
+      "runId": "r-1"
+    },
+    {
+      "type": "THINKING_START",
+      "title": "Working"
+    },
+    {
+      "type": "THINKING_TEXT_MESSAGE_START"
+    },
+    {
+      "type": "THINKING_TEXT_MESSAGE_CONTENT",
+      "delta": "Let me check."
+    },
+    {
+      "type": "THINKING_TEXT_MESSAGE_END"
+    },
+    {
+      "type": "THINKING_END"
+    },
+    {
+      "type": "TEXT_MESSAGE_START",
+      "messageId": "era45-m1",
+      "role": "assistant"
+    },
+    {
+      "type": "TEXT_MESSAGE_CONTENT",
+      "messageId": "era45-m1",
+      "delta": "Checked."
+    },
+    {
+      "type": "TEXT_MESSAGE_END",
+      "messageId": "era45-m1"
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "t-era45",
+      "runId": "r-1"
+    }
   ],
   "expect": {
     "outcome": "completed",
-    "warnings": ["THINKING_START"],
+    "warnings": [
+      "THINKING_START"
+    ],
     "messages": [
-      { "role": "reasoning", "content": "Let me check." },
-      { "role": "assistant", "content": "Checked." }
+      {
+        "role": "reasoning",
+        "content": "Let me check."
+      },
+      {
+        "role": "assistant",
+        "content": "Checked."
+      }
     ]
   },
   "expectOverrides": {

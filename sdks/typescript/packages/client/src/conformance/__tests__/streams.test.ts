@@ -324,10 +324,12 @@ function assertExpectation(
     ).toBe(true);
   }
   for (const path of expectation.requestAbsentPaths ?? []) {
+    // pathExists, not a value read: an explicit null is present, and raw
+    // property access would resolve inherited members like `constructor`.
     expect(
-      readPath(result.request, path),
+      pathExists(result.request, path),
       `${path} must be absent from the request the client sent`,
-    ).toBeUndefined();
+    ).toBe(false);
   }
 }
 

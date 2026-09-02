@@ -148,9 +148,21 @@ describe("the conformance fixture corpus", () => {
       case "noWarnings":
         return value === true;
       case "errorContains":
+      case "outcome":
         return typeof value === "string" && value.length > 0;
-      default:
+      case "messageCount":
+        return typeof value === "number";
+      case "runError":
+        return value === true || (typeof value === "string" && value.length > 0);
+      case "eventTypes":
+      case "messages":
+        return Array.isArray(value);
+      case "state":
         return value !== undefined;
+      default:
+        // A key whose value is the wrong type is read by neither runner, so
+        // it constrains nothing however present it looks from here.
+        return false;
     }
   };
 

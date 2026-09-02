@@ -33,11 +33,22 @@ So a fixture failing does not always mean a client is non-conforming — it
 means a client changed. That is the point of a regression suite, and it is why
 `kill` names a change rather than a rule.
 
-**If you ever point this corpus at a third-party client**, the SHOULD- and
-MAY-level assertions are the ones to relax: `warnings`, `noWarnings`, and the
-`era-*` fixtures' translation results. What remains after that is conformance.
-Nothing in the harness does this for you today, and nothing needs it until
-someone actually runs a third-party client through it.
+- **What these clients do that the specification says they should NOT.** Three
+  fixtures deliberately pin an admitted gap — a closed string set checked as a
+  leaf, so an unrecognised member is fatal where the spec wants it stripped;
+  reasoning discipline that goes unverified. Each says so in its description
+  and names the spec Note that must change with it. These assert the opposite
+  of the rule, on purpose, so that closing the gap is a deliberate act rather
+  than a silent one.
+
+**If you ever point this corpus at a third-party client**, three groups need
+relaxing: the SHOULD-level `warnings` and `noWarnings`; the `era-*` fixtures'
+translation results, which the spec only permits; and the three admitted-gap
+fixtures, which assert behaviour the spec contradicts and whose `outcome` and
+`errorContains` would wrongly fail a client that gets the rule right. What
+remains after that is conformance. Nothing in the harness does this for you
+today, and nothing needs it until someone actually runs a third-party client
+through it.
 
 ## Adding a fixture
 
