@@ -193,6 +193,56 @@ describe("the conformance fixture corpus", () => {
       )
       .map(([key]) => key);
 
+  /** The type each expectation must hold for a runner to read it at all. */
+  const KEY_SHAPES: Record<string, (value: unknown) => boolean> = {
+    outcome: (v) => v === "completed" || v === "failed",
+    errorContains: (v) => typeof v === "string",
+    runError: (v) => typeof v === "boolean" || typeof v === "string",
+    eventTypes: (v) => Array.isArray(v) && v.every((e) => typeof e === "string"),
+    eventTypesAbsent: (v) =>
+      Array.isArray(v) && v.every((e) => typeof e === "string"),
+    eventPaths: (v) => v !== null && typeof v === "object" && !Array.isArray(v),
+    eventAbsentPaths: (v) =>
+      Array.isArray(v) && v.every((e) => typeof e === "string"),
+    warnings: (v) => Array.isArray(v) && v.every((e) => typeof e === "string"),
+    noWarnings: (v) => typeof v === "boolean",
+    messageCount: (v) => typeof v === "number",
+    messages: (v) => Array.isArray(v),
+    state: () => true,
+    request: (v) => v !== null && typeof v === "object" && !Array.isArray(v),
+    requestAbsentPaths: (v) =>
+      Array.isArray(v) && v.every((e) => typeof e === "string"),
+  };
+
+  it.each(fixtures)("$file gives every expectation a readable shape", ({
+    fixture,
+  }) => {
+    // Declining to COUNT a wrongly-typed value is not the same as rejecting
+    // it: `eventPaths: []` beside a valid outcome would pass the vacuity
+    // check while the payload assertion it looks like silently does nothing.
+    const blocks: Array<[string, Record<string, unknown>]> = [
+      ["expect", (fixture.expect ?? {}) as Record<string, unknown>],
+    ];
+    for (const [lane, override] of Object.entries(
+      fixture.expectOverrides ?? {},
+    ))
+      blocks.push([
+        `expectOverrides.${lane}`,
+        (override ?? {}) as Record<string, unknown>,
+      ]);
+    for (const [where, block] of blocks) {
+      for (const [key, value] of Object.entries(block)) {
+        if (key === "intentional") continue;
+        const shape = KEY_SHAPES[key];
+        if (shape === undefined) continue; // the unknown-key gate covers this
+        expect(
+          shape(value),
+          `${where}.${key} holds a value no runner can read: ${JSON.stringify(value)}`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it.each(fixtures)("$file asserts something", ({ fixture }) => {
     const base = (fixture.expect ?? {}) as Record<string, unknown>;
     expect(
@@ -267,8 +317,10 @@ describe("the conformance fixture corpus", () => {
     ],
     ["a conformant 1.0 stream stays quiet", "conformant-run-is-quiet"],
     // The 0.0.39 and 0.0.47 fixtures delegate their version-gate coverage
-    // here, and it is the only fixture that kills the 0.0.57 gate — so
-    // deleting it would silently remove three gate checks.
+    // here, so deleting this one removes those two checks entirely. The
+    // 0.0.57 gate is also covered incidentally elsewhere — an unpinned
+    // subagent fixture fails if that shim installs unconditionally — so this
+    // entry protects two gates, not three.
     [
       "the era version gates are killable",
       "era-current-peer-keeps-modern-content",
