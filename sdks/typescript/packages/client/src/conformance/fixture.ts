@@ -40,6 +40,22 @@ export interface StreamExpectation {
   eventTypes?: string[];
   /** Event types that must NOT reach application code. */
   eventTypesAbsent?: string[];
+  /**
+   * Values inside the delivered events, keyed by `"<index>.<dotted path>"`.
+   * Each named path must exist and equal the value given.
+   *
+   * `eventTypes` proves an event survived; this proves what it survived
+   * carrying. Without it a fixture claiming a property was preserved cannot
+   * tell preservation from removal.
+   */
+  eventPaths?: Record<string, unknown>;
+  /**
+   * Paths inside the delivered events, keyed the same way, that must NOT
+   * exist. The only way to assert a removal: a client that warned about
+   * stripping something and then delivered it anyway satisfies everything
+   * else.
+   */
+  eventAbsentPaths?: string[];
   /** Substrings that must each appear in at least one emitted warning. */
   warnings?: string[];
   /**
@@ -52,8 +68,12 @@ export interface StreamExpectation {
   messageCount?: number;
   /** Subset-matched against the final messages, in order. */
   messages?: Array<Record<string, unknown>>;
-  /** Subset-matched against the final state. */
-  state?: Record<string, unknown>;
+  /**
+   * Subset-matched against the final state. Any JSON value: state is
+   * unconstrained by the schema, and fixtures legitimately expect an array,
+   * a number or null.
+   */
+  state?: unknown;
   /**
    * Subset-matched against the RunAgentInput the client actually sent. The
    * only way to test the input-direction compatibility shims, which never

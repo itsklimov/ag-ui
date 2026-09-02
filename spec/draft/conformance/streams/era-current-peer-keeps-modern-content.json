@@ -1,0 +1,76 @@
+{
+  "name": "era-current-peer-keeps-modern-content",
+  "area": "compatibility",
+  "description": "a current peer receives its content untouched \u2014 the version gates keep the era shims out when they do not apply",
+  "specPage": "/spec/draft/basic/versioning",
+  "kill": "make any era shim install unconditionally (drop its compareVersions gate) \u2014 the 0.0.39 flattening then mangles this modern content and the 0.0.47 upgrade rewrites it",
+  "input": {
+    "messages": [
+      {
+        "id": "eracur-u1",
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "What is in this picture?"
+          },
+          {
+            "type": "image",
+            "source": {
+              "type": "url",
+              "value": "https://example.com/cat.png",
+              "mimeType": "image/png"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "stream": [
+    {
+      "type": "RUN_STARTED",
+      "threadId": "t-eracur",
+      "runId": "r-1"
+    },
+    {
+      "type": "RUN_FINISHED",
+      "threadId": "t-eracur",
+      "runId": "r-1"
+    }
+  ],
+  "expect": {
+    "outcome": "completed",
+    "noWarnings": true,
+    "request": {
+      "messages": [
+        {
+          "id": "eracur-u1",
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "What is in this picture?"
+            },
+            {
+              "type": "image",
+              "source": {
+                "type": "url",
+                "value": "https://example.com/cat.png",
+                "mimeType": "image/png"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expectOverrides": {
+    "dotnet": {
+      "intentional": "the .NET client has no era shims to gate, so it never transforms this content; the request it builds comes from the fixture input rather than a translation layer, and the surviving assertions are that the run completes and the lane stays quiet",
+      "request": {
+        "threadId": "t-eracur",
+        "runId": "r-1"
+      }
+    }
+  }
+}

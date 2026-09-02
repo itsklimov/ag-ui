@@ -1,9 +1,9 @@
 {
   "name": "encrypted-value-unknown-entity-tolerated",
   "area": "reasoning",
-  "description": "a REASONING_ENCRYPTED_VALUE whose entityId names nothing the consumer knows cannot be stored where it belongs, and MUST NOT fail the run — the rest of the conversation survives it intact",
+  "description": "a REASONING_ENCRYPTED_VALUE naming an entity the consumer does not know must not fail the run; the spec lets a consumer drop it, so delivery is deliberately not required",
   "specPage": "/spec/draft/events/reasoning",
-  "kill": "make an unresolvable entityId on REASONING_ENCRYPTED_VALUE throw — the run then fails instead of completing. Materialising a message for the unknown entity rather than leaving the artefact unstored kills `messageCount`; that is exactly what .NET does today, pinned in its override below. Swallowing the event instead of delivering it kills `eventTypes`. HONEST LIMIT: \"attach the artefact to some OTHER, existing message\" is NOT observable through this format, and this kill no longer claims it is — `messages` is subset-matched, so it can require keys but never assert one is absent, and an `encryptedValue` grafted onto m-encrypted-unknown-entity-1 would leave every assertion here green.",
+  "kill": "make an unresolvable entityId fatal in the reducer, or materialise a message for it \u2014 the spec permits DROPPING the event (MAY), so this fixture must not require delivery: it pins tolerance and the conversation staying intact, nothing more",
   "stream": [
     {
       "type": "RUN_STARTED",
@@ -21,7 +21,10 @@
       "messageId": "m-encrypted-unknown-entity-1",
       "delta": "the answer"
     },
-    { "type": "TEXT_MESSAGE_END", "messageId": "m-encrypted-unknown-entity-1" },
+    {
+      "type": "TEXT_MESSAGE_END",
+      "messageId": "m-encrypted-unknown-entity-1"
+    },
     {
       "type": "REASONING_ENCRYPTED_VALUE",
       "subtype": "message",
@@ -36,14 +39,6 @@
   ],
   "expect": {
     "outcome": "completed",
-    "eventTypes": [
-      "RUN_STARTED",
-      "TEXT_MESSAGE_START",
-      "TEXT_MESSAGE_CONTENT",
-      "TEXT_MESSAGE_END",
-      "REASONING_ENCRYPTED_VALUE",
-      "RUN_FINISHED"
-    ],
     "messageCount": 1,
     "messages": [
       {
@@ -55,13 +50,7 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The tolerance the fixture requires holds — the run completes and the conversation survives — but .NET materialises the encrypted value as its own reasoning-content update keyed on the entityId, so an unknown entity leaves an extra contentless message behind instead of being stored nowhere. The .NET client's event surface is ChatResponseUpdate.RawRepresentation, and the builder-only events yield no update: TEXT_MESSAGE_START and TEXT_MESSAGE_END open and close the message being assembled and hand a consumer nothing, so they cannot appear in a delivered list however faithfully the client processes them. The list here is the base list minus exactly those; every event this fixture is actually about is still in it, in order. REASONING_ENCRYPTED_VALUE for the unknown entity is still delivered rather than swallowed; what .NET additionally does with it is pinned by messageCount below.",
-      "eventTypes": [
-        "RUN_STARTED",
-        "TEXT_MESSAGE_CONTENT",
-        "REASONING_ENCRYPTED_VALUE",
-        "RUN_FINISHED"
-      ],
+      "intentional": "The tolerance the fixture requires holds \u2014 the run completes and the conversation survives \u2014 but .NET materialises the encrypted value as its own reasoning-content update keyed on the entityId, so an unknown entity leaves an extra contentless message behind instead of being stored nowhere. The .NET client's event surface is ChatResponseUpdate.RawRepresentation, and the builder-only events yield no update: TEXT_MESSAGE_START and TEXT_MESSAGE_END open and close the message being assembled and hand a consumer nothing, so they cannot appear in a delivered list however faithfully the client processes them. The list here is the base list minus exactly those; every event this fixture is actually about is still in it, in order. REASONING_ENCRYPTED_VALUE for the unknown entity is still delivered rather than swallowed; what .NET additionally does with it is pinned by messageCount below.",
       "messageCount": 2,
       "messages": [
         {

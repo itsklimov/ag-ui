@@ -53,11 +53,12 @@ rules. Write the raw JSON you want on the wire.
 Use identifiers prefixed with the fixture name (`"threadId": "t-unknown-event"`)
 so a failure in the output names itself.
 
-One exception to "verbatim": the TypeScript lane's replay server stamps a
-`timestamp` on any event that has none, and replaces an explicit `null` one.
-So a fixture cannot test what a client does with a missing or malformed
-`timestamp` — that belongs in each client's own unit tests. Every other field
-is written exactly as you wrote it.
+One exception to "verbatim": the TypeScript lane's replay server fills in a
+`timestamp` when the event has none or carries `null`. So a fixture cannot
+test what a client does with an *absent* timestamp — that belongs in each
+client's own unit tests. A present-but-wrong one (a string, a float, a
+negative) is passed through untouched and can be tested here. Every other
+field is written exactly as you wrote it.
 
 ### `expect`
 
@@ -68,6 +69,10 @@ Every key is optional; state what the rule actually requires and nothing more.
 | `outcome` | whether the **client** accepted the stream (`"completed"`) or rejected it (`"failed"`) |
 | `errorContains` | substring of the error a client rejection surfaces |
 | `runError` | the **run** reported its own failure: `true`, or a substring of the message |
+| `eventTypes` | the exact ordered list of event types delivered to application code |
+| `eventTypesAbsent` | types that must not reach application code |
+| `eventPaths` | values inside delivered events, keyed `"<index>.<dotted path>"`, each must exist and equal |
+| `eventAbsentPaths` | paths inside delivered events that must not exist |
 | `warnings` | each string must appear in some warning |
 | `noWarnings` | no warning at all was emitted |
 | `messageCount` | how many messages the client holds afterwards |
@@ -85,6 +90,12 @@ conformance failure from a working error path.
 same length, objects are compared only on the keys you name. Assert what the
 specification requires — an exact match would fail on incidentals the two
 clients differ about for no interesting reason.
+
+The four event keys are what let a fixture tell *dropped* from *delivered*.
+Warnings and final messages cannot: a client that warns about stripping
+something and then delivers it anyway satisfies both. `eventTypes` proves an
+event survived; `eventPaths` and `eventAbsentPaths` prove what it survived
+carrying, and are the only way to assert that something was removed.
 
 `request` is how the input-direction rules are tested at all. Two of the
 compatibility shims never touch the event stream: they transform the

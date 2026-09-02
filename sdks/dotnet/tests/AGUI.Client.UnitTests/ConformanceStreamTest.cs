@@ -168,8 +168,36 @@ public sealed class ConformanceStreamTest
         /// here even though the client processed them. A fixture whose
         /// `eventTypes` names one of those needs a dotnet override saying so;
         /// `eventTypesAbsent` is the weaker and safer key on this lane.
+        ///
+        /// `eventPaths` and `eventAbsentPaths` index into this same list, so a
+        /// fixture that numbers its paths against the TypeScript delivery order
+        /// needs its indices restated in a dotnet override — and where the index
+        /// names a builder-only event, restating it is impossible: there is no
+        /// index for an event that produced no update.
         /// </remarks>
         public List<string> EventTypes { get; } = [];
+
+        /// <summary>
+        /// The same delivered events as <see cref="EventTypes"/>, index for
+        /// index, re-serialized to JSON so `eventPaths` and `eventAbsentPaths`
+        /// can be read off them.
+        /// </summary>
+        /// <remarks>
+        /// Re-serialized rather than kept as the fixture's own JSON on purpose:
+        /// what a fixture asserts about a delivered event is what the CLIENT
+        /// hands the application, and on this lane that is a typed model. Echoing
+        /// the wire bytes back would assert nothing about the client at all —
+        /// every `eventAbsentPaths` entry would fail and every `eventPaths` entry
+        /// would pass whatever the models did with the payload.
+        ///
+        /// The round trip is faithful in the directions these keys care about:
+        /// AG-UI types omit a property that has no value (see
+        /// AGUIJsonUtilities), so an absent member stays absent rather than
+        /// reappearing as an explicit null, and the open-by-design members —
+        /// `delta`, `snapshot`, `metadata`, `rawEvent`, `value` — are held as
+        /// <see cref="JsonElement"/> and come back verbatim.
+        /// </remarks>
+        public JsonArray Events { get; } = [];
 
         public List<string> Warnings { get; } = [];
         public JsonArray Messages { get; set; } = [];
@@ -250,6 +278,8 @@ public sealed class ConformanceStreamTest
                 if (update.RawRepresentation is BaseEvent delivered)
                 {
                     result.EventTypes.Add(delivered.Type);
+                    result.Events.Add(JsonSerializer.SerializeToNode(
+                        delivered, s_options.GetTypeInfo(typeof(BaseEvent))));
                 }
 
                 if (update.RawRepresentation is RunErrorEvent runError)
@@ -390,10 +420,21 @@ public sealed class ConformanceStreamTest
             }
         }
 
-        if (fixtureInput["forwardedProps"] is { } forwarded)
+        // ContainsKey, not a null test on the node. The schema leaves
+        // forwardedProps as any JSON value, null included, and JsonNode
+        // represents an absent key and an explicit JSON null identically — so
+        // reading the node turned a fixture that deliberately forwards `null`
+        // into one that forwards nothing at all, which is a different request
+        // on the wire and the opposite of what such a fixture states. Asking
+        // the object for the key is the only way to keep the two apart.
+        if (fixtureInput.ContainsKey("forwardedProps"))
         {
-            input.ForwardedProperties = (JsonElement?)JsonSerializer.Deserialize(
-                forwarded.ToJsonString(), s_options.GetTypeInfo(typeof(JsonElement)));
+            using var forwarded = JsonDocument.Parse(
+                fixtureInput["forwardedProps"]?.ToJsonString() ?? "null");
+            // Cloned because the JsonElement outlives the document it is read
+            // from; a null value clones to a JsonValueKind.Null element, which
+            // the property then writes as an explicit null.
+            input.ForwardedProperties = forwarded.RootElement.Clone();
         }
 
         return input;
@@ -437,6 +478,39 @@ public sealed class ConformanceStreamTest
                     result.EventTypes.Contains(type, StringComparer.Ordinal),
                     $"[{name}] {type} must not reach application code; delivered: "
                     + (result.EventTypes.Count == 0 ? "(none)" : string.Join(", ", result.EventTypes)));
+            }
+        }
+
+        // Keyed "<index>.<dotted path>" into the delivered events, the same list
+        // `eventTypes` is built from — so an index here means the same event it
+        // means there. Mirrors pathExists + readPath in the TypeScript runner.
+        if (expectation["eventPaths"] is JsonObject eventPaths)
+        {
+            foreach (var (path, expectedValue) in eventPaths)
+            {
+                Assert.True(
+                    PathExists(result.Events, path),
+                    $"[{name}] {path} must exist in the events delivered to application code: "
+                    + result.Events.ToJsonString() + context);
+                var actual = ReadPath(result.Events, path);
+                Assert.True(
+                    JsonNode.DeepEquals(actual, expectedValue),
+                    $"[{name}] the delivered event at {path} did not match:"
+                    + $"\nexpected {expectedValue?.ToJsonString() ?? "null"}"
+                    + $"\nactual {actual?.ToJsonString() ?? "null"}" + context);
+            }
+        }
+
+        if (expectation["eventAbsentPaths"] is JsonArray eventAbsentPaths)
+        {
+            foreach (var absent in eventAbsentPaths)
+            {
+                var path = (string?)absent ?? string.Empty;
+                Assert.False(
+                    PathExists(result.Events, path),
+                    $"[{name}] {path} must NOT exist in the events delivered to application code — "
+                    + "an explicit null is still the member being delivered: "
+                    + result.Events.ToJsonString() + context);
             }
         }
 
@@ -585,7 +659,8 @@ public sealed class ConformanceStreamTest
     private static string Quote(string? value) => JsonValue.Create(value)?.ToJsonString() ?? "null";
 
     /// <summary>
-    /// Whether a dot/index path exists at all in the sent request.
+    /// Whether a dot/index path exists at all — in the sent request, or in the
+    /// delivered events.
     /// </summary>
     /// <remarks>
     /// Presence, not value: a member written as JSON <c>null</c> is present. It
@@ -594,7 +669,8 @@ public sealed class ConformanceStreamTest
     /// <c>"protocolVersion": null</c> has received it, whatever the value is.
     /// Returning the node would have made the two indistinguishable, since
     /// <see cref="JsonNode"/> represents an absent key and a JSON null the same
-    /// way.
+    /// way. <c>eventAbsentPaths</c> turns on exactly the same distinction: a
+    /// client that "removed" a property by nulling it has not removed it.
     /// </remarks>
     private static bool PathExists(JsonNode? node, string path)
     {
@@ -615,6 +691,32 @@ public sealed class ConformanceStreamTest
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The value at a dot/index path, or null when the path does not resolve.
+    /// Only meaningful once <see cref="PathExists"/> has said the path is there,
+    /// which is why the two are always called as a pair.
+    /// </summary>
+    private static JsonNode? ReadPath(JsonNode? node, string path)
+    {
+        foreach (var segment in path.Split('.'))
+        {
+            node = node switch
+            {
+                JsonObject obj => obj[segment],
+                JsonArray array when int.TryParse(segment, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index)
+                    && index >= 0 && index < array.Count => array[index],
+                _ => null,
+            };
+
+            if (node is null)
+            {
+                return null;
+            }
+        }
+
+        return node;
     }
 
     // ────────────────────────────────────────────────

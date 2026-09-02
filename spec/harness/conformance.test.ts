@@ -94,6 +94,8 @@ describe("the conformance fixture corpus", () => {
     "state",
     "request",
     "requestAbsentPaths",
+    "eventPaths",
+    "eventAbsentPaths",
   ]);
 
   it.each(fixtures)("$file uses only implemented expectation keys", ({
@@ -121,12 +123,61 @@ describe("the conformance fixture corpus", () => {
     }
   });
 
+  /**
+   * Whether a key actually constrains anything. Several forms look like
+   * assertions and are not: `warnings: []` reads as "each of these substrings
+   * must appear" over an empty list, `request: {}` subset-matches every
+   * object, `noWarnings: false` is the default. An empty ARRAY is different
+   * where the emptiness is the claim — `eventTypes: []` says no events were
+   * delivered, `messages: []` says none were built — so those still count.
+   */
+  const isEffective = (key: string, value: unknown): boolean => {
+    switch (key) {
+      case "warnings":
+      case "eventTypesAbsent":
+      case "eventAbsentPaths":
+      case "requestAbsentPaths":
+        return Array.isArray(value) && value.length > 0;
+      case "request":
+      case "eventPaths":
+        return (
+          value !== null &&
+          typeof value === "object" &&
+          Object.keys(value as Record<string, unknown>).length > 0
+        );
+      case "noWarnings":
+        return value === true;
+      case "errorContains":
+        return typeof value === "string" && value.length > 0;
+      default:
+        return value !== undefined;
+    }
+  };
+
+  const effectiveKeys = (block: Record<string, unknown>): string[] =>
+    Object.entries(block)
+      .filter(([key, value]) => key !== "intentional" && isEffective(key, value))
+      .map(([key]) => key);
+
   it.each(fixtures)("$file asserts something", ({ fixture }) => {
-    // An expectation block with no keys is a test that cannot fail.
+    const base = (fixture.expect ?? {}) as Record<string, unknown>;
     expect(
-      Object.keys((fixture.expect ?? {}) as Record<string, unknown>).length,
-      "expect must contain at least one assertion",
-    ).toBeGreaterThan(0);
+      effectiveKeys(base),
+      "expect must contain at least one assertion that actually constrains something",
+    ).not.toEqual([]);
+
+    // And so must each lane after its overrides are applied: an override that
+    // neutralises every key leaves that lane running the fixture for nothing.
+    for (const [lane, override] of Object.entries(
+      fixture.expectOverrides ?? {},
+    )) {
+      const resolved = { ...base, ...(override as Record<string, unknown>) };
+      delete resolved.intentional;
+      expect(
+        effectiveKeys(resolved),
+        `after the ${lane} override this fixture asserts nothing on that lane`,
+      ).not.toEqual([]);
+    }
   });
 
   it.each(fixtures)(

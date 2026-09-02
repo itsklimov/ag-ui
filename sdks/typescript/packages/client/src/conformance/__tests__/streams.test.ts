@@ -85,6 +85,18 @@ function matchesSubset(actual: unknown, expected: unknown): boolean {
   return actual === expected;
 }
 
+/** Whether a dot/index path exists at all — an explicit null still exists. */
+function pathExists(value: unknown, path: string): boolean {
+  let node: unknown = value;
+  for (const key of path.split(".")) {
+    if (node === null || typeof node !== "object") return false;
+    const record = node as Record<string, unknown>;
+    if (!(key in record)) return false;
+    node = record[key];
+  }
+  return true;
+}
+
 /** Reads a dot/index path, for asserting a field is absent from the request. */
 function readPath(value: unknown, path: string): unknown {
   return path
@@ -100,6 +112,7 @@ function readPath(value: unknown, path: string): unknown {
 
 interface ReplayResult {
   eventTypes: string[];
+  events: Array<Record<string, unknown>>;
   outcome: "completed" | "failed";
   error?: string;
   runError?: string;
@@ -140,9 +153,11 @@ async function replay(fixture: StreamFixture): Promise<ReplayResult> {
   // What actually reached application code, which is the only way a fixture
   // can tell a dropped event from one that was passed through.
   const eventTypes: string[] = [];
+  const events: Array<Record<string, unknown>> = [];
   agent.subscribe({
     onEvent: ({ event }) => {
       eventTypes.push(String((event as { type?: unknown }).type));
+      events.push(event as unknown as Record<string, unknown>);
     },
     onRunErrorEvent: ({ event }) => {
       runError = (event as { message?: string }).message ?? "";
@@ -183,6 +198,7 @@ async function replay(fixture: StreamFixture): Promise<ReplayResult> {
 
   return {
     eventTypes,
+    events,
     outcome,
     error,
     runError,
@@ -216,6 +232,21 @@ function assertExpectation(
       result.eventTypes,
       `${type} must not reach application code`,
     ).not.toContain(type);
+  }
+  for (const [path, value] of Object.entries(expectation.eventPaths ?? {})) {
+    expect(
+      pathExists(result.events, path),
+      `${path} must exist in the delivered events`,
+    ).toBe(true);
+    expect(readPath(result.events, path), `delivered event at ${path}`).toEqual(
+      value,
+    );
+  }
+  for (const path of expectation.eventAbsentPaths ?? []) {
+    expect(
+      pathExists(result.events, path),
+      `${path} must NOT exist in the delivered events`,
+    ).toBe(false);
   }
   if (expectation.errorContains !== undefined) {
     expect(result.error ?? "").toContain(expectation.errorContains);
