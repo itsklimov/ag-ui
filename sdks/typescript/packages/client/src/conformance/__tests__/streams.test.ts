@@ -76,9 +76,14 @@ function matchesSubset(actual: unknown, expected: unknown): boolean {
     );
   }
   if (expected !== null && typeof expected === "object") {
-    if (actual === null || typeof actual !== "object") return false;
+    // An expected OBJECT must meet an object, never an array: `typeof` calls
+    // both "object", and the .NET lane distinguishes them, so accepting an
+    // array here would let the two lanes disagree about the same fixture.
+    if (actual === null || typeof actual !== "object" || Array.isArray(actual))
+      return false;
     return Object.entries(expected as Record<string, unknown>).every(
       ([key, value]) =>
+        Object.prototype.hasOwnProperty.call(actual, key) &&
         matchesSubset((actual as Record<string, unknown>)[key], value),
     );
   }
@@ -90,9 +95,20 @@ function pathExists(value: unknown, path: string): boolean {
   let node: unknown = value;
   for (const key of path.split(".")) {
     if (node === null || typeof node !== "object") return false;
-    const record = node as Record<string, unknown>;
-    if (!(key in record)) return false;
-    node = record[key];
+    if (Array.isArray(node)) {
+      // Only a numeric index addresses an array member. `in` would answer
+      // true for `length`, which is not a JSON member and which the .NET
+      // lane's JsonArray would never report.
+      const index = Number(key);
+      if (!Number.isInteger(index) || index < 0 || index >= node.length)
+        return false;
+      node = node[index];
+      continue;
+    }
+    // hasOwnProperty, not `in`: `in` finds inherited members such as
+    // `constructor`, so an absence assertion would silently never hold.
+    if (!Object.prototype.hasOwnProperty.call(node, key)) return false;
+    node = (node as Record<string, unknown>)[key];
   }
   return true;
 }

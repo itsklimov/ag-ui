@@ -154,9 +154,27 @@ describe("the conformance fixture corpus", () => {
     }
   };
 
-  const effectiveKeys = (block: Record<string, unknown>): string[] =>
+  /**
+   * Keys a lane does not implement at all. The .NET client keeps no state and
+   * has no JSON Patch reducer, so its runner skips `state` — a fixture whose
+   * only constraint is `state` therefore asserts nothing there, however
+   * effective the key looks from here.
+   */
+  const UNIMPLEMENTED: Record<string, Set<string>> = {
+    dotnet: new Set(["state"]),
+  };
+
+  const effectiveKeys = (
+    block: Record<string, unknown>,
+    lane?: string,
+  ): string[] =>
     Object.entries(block)
-      .filter(([key, value]) => key !== "intentional" && isEffective(key, value))
+      .filter(
+        ([key, value]) =>
+          key !== "intentional" &&
+          isEffective(key, value) &&
+          !(lane !== undefined && UNIMPLEMENTED[lane]?.has(key)),
+      )
       .map(([key]) => key);
 
   it.each(fixtures)("$file asserts something", ({ fixture }) => {
@@ -166,16 +184,16 @@ describe("the conformance fixture corpus", () => {
       "expect must contain at least one assertion that actually constrains something",
     ).not.toEqual([]);
 
-    // And so must each lane after its overrides are applied: an override that
-    // neutralises every key leaves that lane running the fixture for nothing.
-    for (const [lane, override] of Object.entries(
-      fixture.expectOverrides ?? {},
-    )) {
+    // And so must EVERY lane, whether or not it has an override: a lane that
+    // skips a key it does not implement can be left asserting nothing even
+    // when the base looks well populated.
+    for (const lane of ["typescript", "dotnet"]) {
+      const override = (fixture.expectOverrides ?? {})[lane] ?? {};
       const resolved = { ...base, ...(override as Record<string, unknown>) };
       delete resolved.intentional;
       expect(
-        effectiveKeys(resolved),
-        `after the ${lane} override this fixture asserts nothing on that lane`,
+        effectiveKeys(resolved, lane),
+        `on the ${lane} lane this fixture asserts nothing`,
       ).not.toEqual([]);
     }
   });
@@ -216,7 +234,16 @@ describe("the conformance fixture corpus", () => {
     ],
     ["a malformed sequence is rejected", "content-without-start-fatal"],
     ["the 0.0.39 era shim has a fixture", "era-0-0-39-flattens-content"],
-    ["the 0.0.45 era shim has a fixture", "era-0-0-45-thinking-translated"],
+    // Deliberately not "the 0.0.45 shim has a fixture". It cannot have one:
+    // the always-on compatibility boundary translates every THINKING_* shape
+    // the 0.0.45 shim handles, and runs innermost, so the shim never sees one
+    // in the shipped pipeline. Measured — disabling either translator alone
+    // leaves the fixture green; only disabling both fails it. What the fixture
+    // holds is the retired shapes' translation, wherever it happens.
+    [
+      "retired THINKING_* shapes are translated by something",
+      "era-0-0-45-thinking-translated",
+    ],
     ["the 0.0.47 era shim has a fixture", "era-0-0-47-upgrades-binary-content"],
     [
       "the 0.0.57 era shim has a fixture",

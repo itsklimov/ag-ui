@@ -1,9 +1,9 @@
 {
   "name": "era-0-0-45-thinking-translated",
   "area": "compatibility",
-  "description": "a retired THINKING_* stream is translated into reasoning rather than dropped as unrecognised",
+  "description": "a retired THINKING_* stream is translated into reasoning rather than dropped as unrecognised — by the always-on compatibility boundary, with the version-gated 0.0.45 shim behind it as a proven fallback",
   "specPage": "/spec/draft/basic/versioning",
-  "kill": "remove the THINKING_* translation; the events then reach enforcement as unrecognised types and are dropped, losing the reasoning entirely",
+  "kill": "remove the THINKING_* translation from BOTH CompatibilityBoundary and BackwardCompatibility_0_0_45; the events then reach enforcement as unrecognised types and are dropped, losing the reasoning entirely. Removing either one ALONE leaves this green, and that is not a gap in the fixture but the shape of the code: the always-on boundary runs innermost and converts every THINKING_* event before the version-gated shim can see one, so on an unmutated build 0.0.45's translation never runs. What this fixture proves about 0.0.45 is therefore that it still works as a fallback (deleting the boundary's branches keeps the fixture green through it), not that the shipped pipeline exercises it",
   "client": { "maxProtocolVersion": "0.0.45" },
   "stream": [
     { "type": "RUN_STARTED", "threadId": "t-era45", "runId": "r-1" },

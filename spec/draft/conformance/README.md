@@ -14,6 +14,31 @@ tested against the implementation that happened to hold them — which is how th
 two clients ended up disagreeing about what to do with something they do not
 recognise, with both test suites green.
 
+## What this corpus is, and is not
+
+It is a **regression suite for the first-party clients**, and it asserts two
+different kinds of thing:
+
+- **What the specification requires.** Every MUST and MUST NOT the streams
+  exercise. A client failing one of these is non-conforming.
+- **What these clients have chosen to do** where the specification leaves room.
+  The spec says a consumer SHOULD warn about material it strips; ours do, and
+  these fixtures hold them to it. It says a party MAY downgrade for an older
+  peer; ours ship four era shims, and this ticket exists partly so that none of
+  them survives untested. It says nothing about staying quiet on a clean
+  stream; `conformant-run-is-quiet` demands it anyway, because a tolerance
+  regression that starts complaining about legal traffic has no other guard.
+
+So a fixture failing does not always mean a client is non-conforming — it
+means a client changed. That is the point of a regression suite, and it is why
+`kill` names a change rather than a rule.
+
+**If you ever point this corpus at a third-party client**, the SHOULD- and
+MAY-level assertions are the ones to relax: `warnings`, `noWarnings`, and the
+`era-*` fixtures' translation results. What remains after that is conformance.
+Nothing in the harness does this for you today, and nothing needs it until
+someone actually runs a third-party client through it.
+
 ## Adding a fixture
 
 Write one JSON file in `streams/`. The file name is the fixture name.
@@ -147,9 +172,11 @@ than pretending. An override says a lane *differs*; a skipped key says a lane
 
 ### Asserting that something is *gone*
 
-The matchers can require a key to equal a value; they cannot require a key to
-be absent (except in the request, via `requestAbsentPaths`). Where a fixture
-needs to prove a removal, use a shape a wrong implementation cannot produce:
+Absence inside a **delivered event** is directly assertable with
+`eventAbsentPaths`, and absence in the **sent request** with
+`requestAbsentPaths`. What the subset matchers cannot express is absence
+inside `messages` or `state` — there, use a shape a wrong implementation
+cannot produce:
 
 - **A dropped state key** — make the replacing snapshot a root-level array
   (`["only-this"]`). No merge can produce that, so a `state = {...old, ...new}`
@@ -176,6 +203,19 @@ equivalent.
 - **Protobuf.** Byte-level parity between implementations is pinned by the
   shared corpus in `sdks/typescript/packages/proto/__tests__/__fixtures__/bytes`.
 - **Python.** There is no Python client to hold to this.
+
+## A shim with no fixture
+
+There are four version-gated compatibility shims and only three of them can be
+tested here. The 0.0.45 shim translates the retired `THINKING_*` shapes — but
+so does the always-on compatibility boundary, which runs innermost and handles
+exactly the same five event types with the same output. In the shipped
+pipeline the shim never sees one. Disabling either translator alone leaves
+`era-0-0-45-thinking-translated` green; only disabling both fails it.
+
+So that fixture pins the translation, not the shim. The shim is unreachable
+code, which is a finding about the client rather than a gap in this corpus,
+and no fixture can close it while the boundary exists.
 
 ## The corpus gate
 
