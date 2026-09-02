@@ -113,17 +113,25 @@ function pathExists(value: unknown, path: string): boolean {
   return true;
 }
 
-/** Reads a dot/index path, for asserting a field is absent from the request. */
+/**
+ * Reads a dot/index path. Walks arrays by numeric index, exactly as
+ * `pathExists` does — otherwise a zero-padded segment like "01" would exist
+ * and then read as undefined, and the two lanes would disagree.
+ */
 function readPath(value: unknown, path: string): unknown {
-  return path
-    .split(".")
-    .reduce<unknown>(
-      (node, key) =>
-        node === null || typeof node !== "object"
-          ? undefined
-          : (node as Record<string, unknown>)[key],
-      value,
-    );
+  let node: unknown = value;
+  for (const key of path.split(".")) {
+    if (node === null || typeof node !== "object") return undefined;
+    if (Array.isArray(node)) {
+      const index = Number(key);
+      if (!Number.isInteger(index) || index < 0 || index >= node.length)
+        return undefined;
+      node = node[index];
+      continue;
+    }
+    node = (node as Record<string, unknown>)[key];
+  }
+  return node;
 }
 
 interface ReplayResult {

@@ -3,7 +3,7 @@
   "area": "lifecycle",
   "description": "an interrupt outcome on RUN_FINISHED is described 1.0 material, not something to strip or reject: it survives enforcement without a warning, and it closes the run rather than failing it",
   "specPage": "/spec/draft/events/lifecycle",
-  "kill": "drop RunFinishedInterruptOutcomeSchema from the RunFinishedOutcomeSchema union — enforcement then strips the outcome and warns \"Removed unrecognised material at '/outcome' on RUN_FINISHED\", which fails `noWarnings` (verified). Making the RUN_FINISHED case in verifyEvents treat an interrupt outcome as a failure kills the `completed` expectation, and swallowing RUN_FINISHED rather than delivering it kills `eventTypes`. WHAT THIS FIXTURE DELIBERATELY DOES NOT CLAIM: the TypeScript client also copies the interrupt onto `agent.pendingInterrupts`, and nothing here can see that — the format has no key for it, and it is read only by the NEXT runAgent() call, which a single-run replay never makes. This fixture used to be called `run-finished-outcome-interrupt-populates-pending` and named that assignment in its description; deleting the assignment left it green. It is renamed to what it actually proves. Covering the pending-interrupt bookkeeping belongs to the agent's own lifecycle unit tests.",
+  "kill": "drop RunFinishedInterruptOutcomeSchema from the outcome union \u2014 enforcement then strips /outcome with a warning and the delivered RUN_FINISHED arrives without it. eventPaths is what proves the payload survived: asserting only that a RUN_FINISHED was delivered would stay green if the outcome were silently removed",
   "stream": [
     {
       "type": "RUN_STARTED",
@@ -21,7 +21,10 @@
       "messageId": "run-finished-interrupt-m-1",
       "delta": "May I proceed?"
     },
-    { "type": "TEXT_MESSAGE_END", "messageId": "run-finished-interrupt-m-1" },
+    {
+      "type": "TEXT_MESSAGE_END",
+      "messageId": "run-finished-interrupt-m-1"
+    },
     {
       "type": "RUN_FINISHED",
       "threadId": "t-run-finished-interrupt",
@@ -49,16 +52,29 @@
     ],
     "noWarnings": true,
     "messageCount": 1,
-    "messages": [{ "role": "assistant", "content": "May I proceed?" }]
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "May I proceed?"
+      }
+    ],
+    "eventPaths": {
+      "4.outcome.type": "interrupt",
+      "4.outcome.interrupts.0.id": "run-finished-interrupt-i-1"
+    }
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The .NET client's event surface is ChatResponseUpdate.RawRepresentation, and the builder-only events yield no update: TEXT_MESSAGE_START and TEXT_MESSAGE_END open and close the message being assembled and hand a consumer nothing, so they cannot appear in a delivered list however faithfully the client processes them. The list here is the base list minus exactly those; every event this fixture is actually about is still in it, in order. RUN_FINISHED carrying the interrupt outcome is still delivered rather than swallowed, which is the half of this fixture the list is here to pin.",
+      "intentional": "The .NET client's event surface is ChatResponseUpdate.RawRepresentation, and the builder-only events yield no update: TEXT_MESSAGE_START and TEXT_MESSAGE_END open and close the message being assembled and hand a consumer nothing, so they cannot appear in a delivered list however faithfully the client processes them. The list here is the base list minus exactly those; every event this fixture is actually about is still in it, in order. RUN_FINISHED carrying the interrupt outcome is still delivered rather than swallowed, which is the half of this fixture the list is here to pin. The outcome payload is pinned at index 2 rather than the base's 4, because the builder-only TEXT_MESSAGE_START and TEXT_MESSAGE_END yield no update on this lane.",
       "eventTypes": [
         "RUN_STARTED",
         "TEXT_MESSAGE_CONTENT",
         "RUN_FINISHED"
-      ]
+      ],
+      "eventPaths": {
+        "2.outcome.type": "interrupt",
+        "2.outcome.interrupts.0.id": "run-finished-interrupt-i-1"
+      }
     }
   }
 }

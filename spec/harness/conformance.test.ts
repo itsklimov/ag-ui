@@ -140,9 +140,13 @@ describe("the conformance fixture corpus", () => {
         return Array.isArray(value) && value.length > 0;
       case "request":
       case "eventPaths":
+        // Not an array: typeof calls one "object" too, and the .NET runner
+        // reads these keys only as JSON objects, so an array would satisfy
+        // this check while that lane ran no assertion at all.
         return (
           value !== null &&
           typeof value === "object" &&
+          !Array.isArray(value) &&
           Object.keys(value as Record<string, unknown>).length > 0
         );
       case "noWarnings":
@@ -262,6 +266,13 @@ describe("the conformance fixture corpus", () => {
       "era-0-0-57-subagent-dropped-with-warning",
     ],
     ["a conformant 1.0 stream stays quiet", "conformant-run-is-quiet"],
+    // The 0.0.39 and 0.0.47 fixtures delegate their version-gate coverage
+    // here, and it is the only fixture that kills the 0.0.57 gate — so
+    // deleting it would silently remove three gate checks.
+    [
+      "the era version gates are killable",
+      "era-current-peer-keeps-modern-content",
+    ],
   ];
 
   it.each(required)("still covers: %s", (_behaviour, fixtureName) => {
