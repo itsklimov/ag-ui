@@ -53,6 +53,12 @@ rules. Write the raw JSON you want on the wire.
 Use identifiers prefixed with the fixture name (`"threadId": "t-unknown-event"`)
 so a failure in the output names itself.
 
+One exception to "verbatim": the TypeScript lane's replay server stamps a
+`timestamp` on any event that has none, and replaces an explicit `null` one.
+So a fixture cannot test what a client does with a missing or malformed
+`timestamp` — that belongs in each client's own unit tests. Every other field
+is written exactly as you wrote it.
+
 ### `expect`
 
 Every key is optional; state what the rule actually requires and nothing more.
@@ -99,11 +105,19 @@ leaving it as a silent inconsistency:
 ```jsonc
 "expectOverrides": {
   "dotnet": {
-    "intentional": "the .NET client has no enforcement stage, so nothing is stripped and no warning is emitted; alignment is tracked separately",
-    "warnings": []
+    "intentional": "the .NET client has no enforcement stage, so nothing is stripped and it stays quiet here; alignment is tracked separately",
+    "noWarnings": true
   }
 }
 ```
+
+**`"warnings": []` does not mean "no warnings".** Both runners read `warnings`
+as "each of these substrings must appear somewhere", so an empty list asserts
+nothing at all — it only *lifts* the base expectation. If you mean the lane
+stays quiet, say `noWarnings: true`; if you mean the base's warning
+requirement does not apply, `"warnings": []` is right, but then say so in
+`intentional`. The same trap applies to `"request": {}` and any other empty
+subset: an empty object matches every object.
 
 The keys an override names replace those keys in `expect` for that lane; every
 other key still applies. `intentional` is required — an override without a

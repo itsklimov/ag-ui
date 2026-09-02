@@ -23,9 +23,10 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "the known TS/.NET asymmetry: .NET's outcome converter is a closed union, so an unknown discriminator is a fatal JsonException rather than stripped material.",
+      "intentional": "the known TS/.NET asymmetry: .NET's outcome converter is a closed union, so an unknown discriminator is a fatal JsonException rather than stripped material — and being fatal, it is thrown rather than warned about. `warnings` is emptied only to displace the base expectation; `noWarnings` asserts that the rejection says nothing on the warning channel.",
       "outcome": "failed",
-      "warnings": []
+      "warnings": [],
+      "noWarnings": true
     }
   }
 }

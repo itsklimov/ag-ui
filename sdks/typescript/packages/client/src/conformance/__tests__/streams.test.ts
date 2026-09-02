@@ -99,6 +99,7 @@ function readPath(value: unknown, path: string): unknown {
 }
 
 interface ReplayResult {
+  eventTypes: string[];
   outcome: "completed" | "failed";
   error?: string;
   runError?: string;
@@ -136,7 +137,13 @@ async function replay(fixture: StreamFixture): Promise<ReplayResult> {
   // not reject the run — it arrives as an event, and this is where a client
   // observes it.
   let runError: string | undefined;
+  // What actually reached application code, which is the only way a fixture
+  // can tell a dropped event from one that was passed through.
+  const eventTypes: string[] = [];
   agent.subscribe({
+    onEvent: ({ event }) => {
+      eventTypes.push(String((event as { type?: unknown }).type));
+    },
     onRunErrorEvent: ({ event }) => {
       runError = (event as { message?: string }).message ?? "";
     },
@@ -175,6 +182,7 @@ async function replay(fixture: StreamFixture): Promise<ReplayResult> {
   }
 
   return {
+    eventTypes,
     outcome,
     error,
     runError,
@@ -196,6 +204,18 @@ function assertExpectation(
         result.error ? ` — it failed with: ${result.error}` : ""
       }`,
     ).toBe(expectation.outcome);
+  }
+  if (expectation.eventTypes !== undefined) {
+    expect(
+      result.eventTypes,
+      "the events delivered to application code",
+    ).toEqual(expectation.eventTypes);
+  }
+  for (const type of expectation.eventTypesAbsent ?? []) {
+    expect(
+      result.eventTypes,
+      `${type} must not reach application code`,
+    ).not.toContain(type);
   }
   if (expectation.errorContains !== undefined) {
     expect(result.error ?? "").toContain(expectation.errorContains);

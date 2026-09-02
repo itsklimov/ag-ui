@@ -21,8 +21,17 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The subagent downgrade is TypeScript client middleware; the .NET client has no equivalent, so it keeps the subagent lifecycle events and the attribution, and emits no warning.",
-      "warnings": []
+      "intentional": "The subagent downgrade is TypeScript client middleware; the .NET client has no equivalent, so SUBAGENT_STARTED and SUBAGENT_FINISHED are recognised 1.0 events that pass straight through, the delegated message keeps its subagentRunId, and nothing warns. `warnings` is emptied only to displace the base expectation; `noWarnings` asserts the silence and the `messages` entry asserts the attribution the shim would have dropped, so both halves of the claim above are now pinned rather than merely stated.",
+      "warnings": [],
+      "noWarnings": true,
+      "messages": [
+        {
+          "id": "era57-m1",
+          "role": "assistant",
+          "content": "Found it.",
+          "subagentRunId": "era57-s1"
+        }
+      ]
     }
   }
 }

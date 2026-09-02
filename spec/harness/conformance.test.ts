@@ -75,6 +75,60 @@ describe("the conformance fixture corpus", () => {
     ).toBe(true);
   });
 
+  /**
+   * The keys a lane actually implements. A runner ignores what it does not
+   * recognise, so a typo — `messageCounts` for `messageCount` — would produce
+   * a fixture that asserts nothing at all and still passes. Nothing else
+   * catches that, which makes this the gate's most load-bearing check.
+   */
+  const EXPECTATION_KEYS = new Set([
+    "outcome",
+    "errorContains",
+    "runError",
+    "eventTypes",
+    "eventTypesAbsent",
+    "warnings",
+    "noWarnings",
+    "messageCount",
+    "messages",
+    "state",
+    "request",
+    "requestAbsentPaths",
+  ]);
+
+  it.each(fixtures)("$file uses only implemented expectation keys", ({
+    fixture,
+  }) => {
+    const blocks: Array<[string, Record<string, unknown>]> = [
+      ["expect", (fixture.expect ?? {}) as Record<string, unknown>],
+    ];
+    for (const [lane, override] of Object.entries(
+      fixture.expectOverrides ?? {},
+    )) {
+      blocks.push([
+        `expectOverrides.${lane}`,
+        (override ?? {}) as Record<string, unknown>,
+      ]);
+    }
+    for (const [where, block] of blocks) {
+      for (const key of Object.keys(block)) {
+        if (where !== "expect" && key === "intentional") continue;
+        expect(
+          EXPECTATION_KEYS.has(key),
+          `${where}.${key} is not an expectation any lane implements — a typo here asserts nothing`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it.each(fixtures)("$file asserts something", ({ fixture }) => {
+    // An expectation block with no keys is a test that cannot fail.
+    expect(
+      Object.keys((fixture.expect ?? {}) as Record<string, unknown>).length,
+      "expect must contain at least one assertion",
+    ).toBeGreaterThan(0);
+  });
+
   it.each(fixtures)(
     "$file explains any client divergence",
     ({ fixture }) => {

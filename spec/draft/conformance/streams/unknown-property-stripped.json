@@ -3,7 +3,7 @@
   "area": "processing",
   "description": "an undescribed property on a known event is stripped with a warning naming its path, and the event itself survives intact",
   "specPage": "/spec/draft/basic/processing",
-  "kill": "make stripUnknown pass unknown object keys through instead of removing them (drop the `stripped.push(...); continue;` branch for an undescribed key) — the run still completes, but no warning names the path and the property reaches application code",
+  "kill": "make stripUnknown pass unknown object keys through instead of removing them (drop the `stripped.push(...); continue;` branch for an undescribed key) — the run still completes, but no warning names the path, which `warnings` catches. The other half of the rule — the event itself survives rather than being discarded whole — is what `eventTypes` pins: a client that treated an event carrying an undescribed key as unrecognised material and dropped it would still satisfy the message assertions if the delta were ever assembled elsewhere, and only the delivered list shows TEXT_MESSAGE_CONTENT reaching application code.",
   "stream": [
     {
       "type": "RUN_STARTED",
@@ -30,13 +30,25 @@
   ],
   "expect": {
     "outcome": "completed",
+    "eventTypes": [
+      "RUN_STARTED",
+      "TEXT_MESSAGE_START",
+      "TEXT_MESSAGE_CONTENT",
+      "TEXT_MESSAGE_END",
+      "RUN_FINISHED"
+    ],
     "warnings": ["/futureProp"],
     "messageCount": 1,
     "messages": [{ "role": "assistant", "content": "content survives" }]
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": ".NET has no enforcement stage yet; alignment tracked separately. Its converters accept the unknown property silently, drop the data, and warn about nothing — so the observable difference is the absent warning, not the surviving content.",
+      "intentional": ".NET has no enforcement stage yet; alignment tracked separately. Its converters accept the unknown property silently, drop the data, and warn about nothing — so the observable difference is the absent warning, not the surviving content. The .NET client's event surface is ChatResponseUpdate.RawRepresentation, and the builder-only events yield no update: TEXT_MESSAGE_START and TEXT_MESSAGE_END open and close the message being assembled and hand a consumer nothing, so they cannot appear in a delivered list however faithfully the client processes them. The list here is the base list minus exactly those; every event this fixture is actually about is still in it, in order. TEXT_MESSAGE_CONTENT still reaches application code, which is the half of this fixture the list is here to pin: an event carrying an undescribed key survives rather than being discarded whole.",
+      "eventTypes": [
+        "RUN_STARTED",
+        "TEXT_MESSAGE_CONTENT",
+        "RUN_FINISHED"
+      ],
       "warnings": [],
       "noWarnings": true
     }

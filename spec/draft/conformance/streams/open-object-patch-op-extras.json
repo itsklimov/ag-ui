@@ -3,7 +3,7 @@
   "area": "processing",
   "description": "where the schema deliberately leaves an object open, an undescribed member is not unrecognised material: a JSON Patch remove carrying a leftover value arrives whole, applies, and draws no warning",
   "specPage": "/spec/draft/basic/processing",
-  "kill": "drop the `specOpen` check in stripAgainst so the RFC 6902 operations are stripped like the protocol's own objects — the stale `value` on the remove is then deleted and a warning names `/delta/0/value`, which is a warning about conformant data",
+  "kill": "drop the `specOpen` check in stripAgainst so the RFC 6902 operations are stripped like the protocol's own objects — the stale `value` on the remove is then deleted and a warning names `/delta/0/value`, which is a warning about conformant data and fails `noWarnings`. `eventTypes` covers the harsher way to get this wrong: treating the operation's extra member as unrecognised material at the event level and discarding STATE_DELTA whole, which the delivered list catches even though the reduced state would still be asserted.",
   "stream": [
     {
       "type": "RUN_STARTED",
@@ -26,6 +26,12 @@
   ],
   "expect": {
     "outcome": "completed",
+    "eventTypes": [
+      "RUN_STARTED",
+      "STATE_SNAPSHOT",
+      "STATE_DELTA",
+      "RUN_FINISHED"
+    ],
     "noWarnings": true,
     "state": { "items": ["keep-a", "keep-b"] }
   }

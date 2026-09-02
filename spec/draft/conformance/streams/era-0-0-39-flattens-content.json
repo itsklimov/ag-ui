@@ -42,9 +42,33 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The compatibility shims are TypeScript client middleware; the .NET client has no equivalent, so it sends the message unflattened and emits no warning. Alignment is tracked separately.",
+      "intentional": "The compatibility shims are TypeScript client middleware; the .NET client has no equivalent, so nothing flattens the content and nothing warns. The image part is described 1.0 material, so — unlike the retired binary part in era-0-0-47 — it deserializes cleanly and is sent to the 0.0.39 peer verbatim, which is exactly the loss this shim exists to prevent; the request below pins that unflattened shape. `warnings` is emptied only to displace the base expectation, since an override replaces a key rather than removing it; `noWarnings` is what actually asserts the silence. Alignment is tracked separately.",
       "warnings": [],
-      "request": {}
+      "noWarnings": true,
+      "request": {
+        "threadId": "t-era39",
+        "runId": "r-1",
+        "messages": [
+          {
+            "id": "era39-u1",
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "What is in this picture?"
+              },
+              {
+                "type": "image",
+                "source": {
+                  "type": "url",
+                  "value": "https://example.com/cat.png",
+                  "mimeType": "image/png"
+                }
+              }
+            ]
+          }
+        ]
+      }
     }
   }
 }

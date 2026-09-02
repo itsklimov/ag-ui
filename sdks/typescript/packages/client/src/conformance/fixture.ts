@@ -29,6 +29,17 @@ export interface StreamExpectation {
    * the reported message must contain.
    */
   runError?: boolean | string;
+  /**
+   * The event types delivered to application code, in order, exactly.
+   *
+   * Without this, a fixture cannot tell dropping from passing through: a
+   * client that emitted the required warning and then delivered the
+   * unrecognised event anyway would satisfy every other key. Any fixture whose
+   * rule is about what reaches the application states this.
+   */
+  eventTypes?: string[];
+  /** Event types that must NOT reach application code. */
+  eventTypesAbsent?: string[];
   /** Substrings that must each appear in at least one emitted warning. */
   warnings?: string[];
   /**

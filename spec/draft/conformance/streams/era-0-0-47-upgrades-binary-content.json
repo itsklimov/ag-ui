@@ -52,8 +52,12 @@
   },
   "expectOverrides": {
     "dotnet": {
-      "intentional": "The compatibility shims are TypeScript client middleware; the .NET client has no equivalent and sends the legacy part unchanged. Alignment is tracked separately.",
-      "request": {}
+      "intentional": "The compatibility shims are TypeScript client middleware and the .NET client has no equivalent — but it does not forward the legacy part either. AGUIMessageJsonConverter's input-content union is closed, so a {\"type\":\"binary\"} part throws \"Unknown InputContent type: 'binary'\" while the run input is being deserialized; this lane's BuildInput catches that per message and starts the run without it, so the WHOLE message — its conformant text part included — never reaches the agent. Neither upgraded nor forwarded: dropped. The empty messages list below is what pins that, in place of the `{}` that used to match any request at all. Alignment is tracked separately.",
+      "request": {
+        "threadId": "t-era47",
+        "runId": "r-1",
+        "messages": []
+      }
     }
   }
 }
