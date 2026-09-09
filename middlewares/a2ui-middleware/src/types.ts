@@ -31,6 +31,14 @@ export interface A2UIComponentSchema {
  */
 export interface A2UIMiddlewareConfig {
   /**
+   * Project history without tool injection, user actions, recovery, or settlement.
+   * Only threadId/runId are forwarded with empty execution inputs. The backend
+   * must support history reads; this option cannot make an executing backend read-only.
+   * Cold history supports direct render calls and independent result envelopes.
+   * Legacy nested calls without durable ownership metadata cannot be deduplicated.
+   */
+  readOnly?: boolean;
+  /**
    * Component schema — declares which components are available to agents.
    * When provided, the schema is injected as context into RunAgentInput
    * so agents know what components they can generate.
@@ -103,7 +111,6 @@ export interface A2UIMiddlewareConfig {
    * streamed args, then to the v0.9 basic catalog.
    */
   defaultCatalogId?: string;
-
 }
 
 /**
@@ -138,7 +145,11 @@ export interface A2UIForwardedProps {
 /**
  * A2UI message types (v0.9)
  */
-export type A2UIMessageType = "createSurface" | "updateComponents" | "updateDataModel" | "deleteSurface";
+export type A2UIMessageType =
+  | "createSurface"
+  | "updateComponents"
+  | "updateDataModel"
+  | "deleteSurface";
 
 /**
  * A2UI message structure (v0.9)
@@ -163,4 +174,3 @@ export interface A2UIMessage {
     surfaceId: string;
   };
 }
-
